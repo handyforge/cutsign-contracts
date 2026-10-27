@@ -41,5 +41,11 @@ This repository mirrors `contracts/` of the CutSign application repository; chan
 here with each release. Schemas and documentation are MIT (`LICENSE`); fixtures are CC0 (`project-file/fixtures/LICENSE`).
 The application itself is proprietary and is not in this repository.
 
-The MCP tool contract and the Claude Code / Codex skill for driving a running CutSign will be added here when that
-round ships (see the application's `docs/blueprint/MCP_AGENT_CONTROL_BLUEPRINT.md`).
+## MCP: drive the running app
+
+| Path | What |
+|---|---|
+| `mcp/MCP.md` | How to connect Claude Code, Codex, Cursor or Gemini CLI to a running CutSign (`CutSign.exe --mcp`), the security model, error codes, and the tool reference generated from the app's tool schemas |
+| `mcp/cutsign-skill/SKILL.md` | The agent skill: the read → edit → look → person-reviews loop, every tool with its parameters, the workspace rules, rendering overlays from a brief |
+
+Both files mirror `docs/MCP.md` and `docs/agent/cutsign-skill/SKILL.md` of the application repository.
