@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "source": "{{root}}/analysis.mp4",
+  "duration": 21.0,
+  "createdAt": "2026-10-01T08:00:00+07:00",
+  "createdAtSource": "embedded",
+  "analysis": { "detectHuman": true, "blackSampleFps": 5.0, "humanSampleFps": 2.0 },
+  "regions": [
+    { "id": "asset-analysis-segment-1", "start": 0.0, "end": 3.0, "kind": "proposed-cut", "decision": "drop", "included": false, "origin": "black", "review": "approved", "locked": false, "label": "Black" },
+    { "id": "asset-analysis-segment-2", "start": 3.0, "end": 8.0, "kind": "keep", "decision": "keep", "included": true, "origin": "human-protected", "review": "approved", "locked": true, "label": "Human protected" },
+    { "id": "asset-analysis-segment-3", "start": 8.0, "end": 18.0, "kind": "keep", "decision": "pending", "included": true, "origin": "ai", "review": "pending", "locked": false, "label": "Bright · pending cut" },
+    { "id": "asset-analysis-segment-4", "start": 18.0, "end": 21.0, "kind": "proposed-cut", "decision": "drop", "included": false, "origin": "black", "review": "approved", "locked": false, "label": "Black" }
+  ]
+}

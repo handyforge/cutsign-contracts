@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://handyforge.app/cutsign/contracts/project-file/project.v3.schema.json",
+  "title": "CutSign project file (.cutsign.json), versions 2 and 3",
+  "description": "The project document shared by the CLI writer (services/audit_project.py), the desktop writer and reader (apps/desktop editor-model.ts migrateProject, project-store.ts) and the Rust exporter (model.rs, export.rs). Version 2 has the same shape as version 3; the desktop upgrades 2 to 3 on open. A writer must emit every field listed in `required` of each object: the list is the union of what every reader needs, so a document that passes this schema opens in the desktop and exports in Rust. Cross references (segments[].assetId, sourceOrder, groups[].assetIds pointing at assets[].id) are NOT expressible here; tests check them separately.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "createdAt", "assets", "sourceOrder", "segments"],
+  "properties": {
+    "version": {
+      "enum": [2, 3],
+      "description": "Document version. Readers reject any other value that carries `assets` with the error `[project.version_unsupported] Project version {n} was saved by a newer CutSign. Update the app to open it.` A document without `assets` is the version 1 analysis payload (analysis.v1.schema.json)."
+    },
+    "createdAt": {
+      "$ref": "#/$defs/timestamp",
+      "description": "When the project was first created. Required by the desktop type; the Rust exporter ignores it."
+    },
+    "reviewedAt": {
+      "$ref": "#/$defs/timestamp",
+      "description": "Last time a human edited a review decision. Written by the desktop only."
+    },
+    "assets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/asset" },
+      "description": "Every source video in the project, in import order. Required by the exporter."
+    },
+    "sourceOrder": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Asset ids in sequence order. The exporter walks this list and skips ids without an asset."
+    },
+    "manualOrder": {
+      "type": "boolean",
+      "description": "True once the user reordered sources by hand; the desktop then stops sorting by capture time. Absent means false."
+    },
+    "segments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/segment" },
+      "description": "Edit segments over source time. Required by the exporter."
+    },
+    "groups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/group" },
+      "description": "Media pool groups. Optional: the desktop rebuilds every group whose pinnedMembership is false on open, so only pinned groups survive a round trip unchanged."
+    },
+    "groupingConfig": {
+      "$ref": "#/$defs/groupingConfig"
+    },
+    "preprocessingRuns": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/preprocessingRun" },
+      "description": "History of preprocessing runs (CLI --pre and desktop Auto cut). Informational; no reader acts on it."
+    },
+    "editor": {
+      "$ref": "#/$defs/editor"
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:?\\d{2})?$",
+      "description": "Loose ISO-8601 date-time: Python isoformat() with offset and JavaScript toISOString() both match. Not `format: date-time` because strict ajv rejects unknown formats without ajv-formats."
+    },
+    "timebase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["num", "den"],
+      "properties": {
+        "num": { "type": "integer", "minimum": 1 },
+        "den": { "type": "integer", "minimum": 1 }
+      },
+      "description": "Rational seconds per pts unit. The exporter rejects non-positive values at export time; the CLI and the desktop write 1/1000."
+    },
+    "sourceFingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size", "modifiedNs"],
+      "properties": {
+        "size": { "type": "integer", "minimum": 0 },
+        "modifiedNs": {
+          "type": "integer",
+          "description": "File modification time in nanoseconds (Python st_mtime_ns). JavaScript numbers hold it only to about 2^53, so a desktop round trip may round the last digits."
+        }
+      },
+      "description": "Size and mtime used to detect a replaced source and to key caches."
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "name", "capturedAt", "capturedAtSource", "importOrder", "durationPts", "timebase", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "`asset-` + FNV-1a 32-bit hash (UTF-16 code units, base 36) of the lower-cased path with `/` separators. fixtures/asset-id.json pins the hash for the desktop and the CLI."
+        },
+        "path": { "type": "string", "minLength": 1, "description": "Absolute path of the source video. Required by the exporter." },
+        "name": { "type": "string", "minLength": 1, "description": "File name shown in the media pool. Required by the desktop." },
+        "capturedAt": { "$ref": "#/$defs/timestamp", "description": "Capture time used for chronological ordering and date groups." },
+        "capturedAtSource": {
+          "enum": ["embedded", "filename", "filesystem", "import-order", "manual"],
+          "description": "Where capturedAt came from. The engine writes embedded, filename or filesystem; the desktop adds import-order (queued, not probed yet) and manual."
+        },
+        "importOrder": { "type": "integer", "minimum": 0, "description": "Stable tie-breaker when two assets share a capture time." },
+        "durationPts": { "type": "integer", "minimum": 0, "description": "Duration in timebase units; 0 while queued. Required by the exporter." },
+        "timebase": { "$ref": "#/$defs/timebase" },
+        "status": {
+          "enum": ["queued", "analyzing", "ready", "error"],
+          "description": "Analysis state. The exporter only renders assets whose status is ready."
+        },
+        "error": { "type": "string", "description": "Human readable reason when status is error. Desktop only." },
+        "sourceFingerprint": { "$ref": "#/$defs/sourceFingerprint" },
+        "relativeSourceFolder": {
+          "type": "string",
+          "description": "Parent folder relative to the input root (`.` for the root itself). The CLI always writes it; the desktop fills it from probe and uses it for folder groups."
+        },
+        "cameraLabel": { "type": "string", "description": "Optional camera name; no writer emits it yet." },
+        "width": { "type": "integer", "minimum": 0, "description": "Frame width from the import probe. Desktop only (PROPERTY_PANE P1); absent in older projects and in CLI output." },
+        "height": { "type": "integer", "minimum": 0, "description": "Frame height from the import probe. Desktop only, optional." },
+        "fps": { "type": "number", "minimum": 0, "description": "Frame rate from the import probe. Desktop only, optional." },
+        "minCutSeconds": { "type": "number", "minimum": 0, "description": "Engine min_cut_seconds at the last analysis. Desktop only (PROPERTY_PANE P2 / SEGMENT_SMOOTHING S3); absent in CLI output and in older projects." }
+      }
+    },
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "assetId", "sourceInPts", "sourceOutPts", "included", "origin", "review"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Unique within the project. Required by the desktop; the exporter ignores it." },
+        "assetId": { "type": "string", "minLength": 1, "description": "Owning asset. Must match an assets[].id (not checkable by this schema)." },
+        "sourceInPts": { "type": "integer", "minimum": 0 },
+        "sourceOutPts": { "type": "integer", "minimum": 0, "description": "Exclusive end. The exporter drops a piece whose end is not after its start or runs past the asset duration." },
+        "included": { "type": "boolean", "description": "Whether the segment is in the output. The exporter keeps only included segments." },
+        "origin": {
+          "enum": ["analysis-keep", "ai", "manual", "human-protected", "black", "unclassified"],
+          "description": "Who proposed the segment. human-protected means a person was detected; every reader MUST treat it as locked regardless of `locked`."
+        },
+        "review": {
+          "enum": ["pending", "approved"],
+          "description": "Human review state. The exporter refuses a project with any pending segment."
+        },
+        "locked": {
+          "type": "boolean",
+          "description": "Optional, default false. Every reader MUST also treat origin == human-protected as locked. The CLI writes it explicitly; the desktop sets it on open; the exporter ORs it with the origin check."
+        },
+        "label": { "type": "string", "description": "Short human label (for example `Bright · pending cut`). The CLI writes it on every segment." }
+      }
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind", "assetIds", "order", "collapsed", "pinnedMembership"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "kind": {
+          "enum": ["session", "date", "folder", "filename", "manual", "folder-date"],
+          "description": "How the group was formed. folder-date is written by the CLI (one group per folder and local day)."
+        },
+        "assetIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "order": { "type": "integer", "minimum": 0 },
+        "collapsed": { "type": "boolean" },
+        "pinnedMembership": {
+          "type": "boolean",
+          "description": "True for groups the desktop must keep as-is (manual sections). Groups with false are rebuilt from groupingConfig on open."
+        }
+      }
+    },
+    "groupingConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "timezone"],
+      "properties": {
+        "mode": {
+          "enum": ["date", "folder", "session", "filename", "folder-date"],
+          "description": "Automatic grouping rule. The desktop offers date, folder, session and filename; the CLI writes folder-date, which the desktop groups like date."
+        },
+        "timezone": { "type": "string", "minLength": 1, "description": "IANA zone used to cut local days." },
+        "sessionGapMinutes": { "type": "number", "exclusiveMinimum": 0, "description": "Desktop session grouping gap; the desktop writes 30 when absent." },
+        "filenamePattern": { "type": "string" }
+      }
+    },
+    "assetResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "status"],
+      "properties": {
+        "assetId": { "type": "string", "minLength": 1 },
+        "status": {
+          "enum": ["completed", "skipped", "error", "ready"],
+          "description": "Per-asset render outcome. `ready` appears when the CLI has no render record for an analysed asset and falls back to the asset status (build_audit_project)."
+        },
+        "output": { "type": ["string", "null"], "description": "Rendered review file, or null when nothing was written." },
+        "error": { "type": ["string", "null"] }
+      }
+    },
+    "preprocessingRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "mode", "settingsSnapshot", "assetResults", "startedAt", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "mode": { "enum": ["proposal", "auto-render"] },
+        "settingsSnapshot": {
+          "type": "object",
+          "description": "Free-form copy of the settings the run used, kept for audit. Deliberately open: CLI and desktop snapshot different settings."
+        },
+        "assetResults": { "type": "array", "items": { "$ref": "#/$defs/assetResult" } },
+        "startedAt": { "$ref": "#/$defs/timestamp" },
+        "completedAt": { "$ref": "#/$defs/timestamp" },
+        "status": {
+          "enum": ["completed", "completed-with-errors", "cancelled"],
+          "description": "Run outcome. The CLI writes completed or completed-with-errors; the desktop also writes cancelled."
+        }
+      }
+    },
+    "editor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "isolatedAssetId"],
+      "properties": {
+        "mode": { "enum": ["sequence", "isolated"] },
+        "isolatedAssetId": { "type": ["string", "null"] }
+      },
+      "description": "Last editor view. Optional; the desktop opens in sequence mode when absent."
+    }
+  }
+}

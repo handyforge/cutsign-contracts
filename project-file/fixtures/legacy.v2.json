@@ -1,0 +1,34 @@
+{
+  "version": 2,
+  "createdAt": "2026-09-20T09:00:00.000Z",
+  "assets": [
+    {
+      "id": "asset-legacy-1",
+      "path": "{{root}}/legacy-1.mp4",
+      "name": "legacy-1.mp4",
+      "capturedAt": "2026-09-20T08:00:00.000Z",
+      "capturedAtSource": "filename",
+      "importOrder": 0,
+      "durationPts": 10000,
+      "timebase": { "num": 1, "den": 1000 },
+      "status": "ready"
+    },
+    {
+      "id": "asset-legacy-2",
+      "path": "{{root}}/legacy-2.mp4",
+      "name": "legacy-2.mp4",
+      "capturedAt": "2026-09-20T08:10:00.000Z",
+      "capturedAtSource": "filesystem",
+      "importOrder": 1,
+      "durationPts": 6000,
+      "timebase": { "num": 1, "den": 1000 },
+      "status": "ready"
+    }
+  ],
+  "sourceOrder": ["asset-legacy-1", "asset-legacy-2"],
+  "segments": [
+    { "id": "asset-legacy-1-segment-1", "assetId": "asset-legacy-1", "sourceInPts": 0, "sourceOutPts": 4000, "included": true, "origin": "analysis-keep", "review": "approved" },
+    { "id": "asset-legacy-1-segment-2", "assetId": "asset-legacy-1", "sourceInPts": 4000, "sourceOutPts": 10000, "included": false, "origin": "ai", "review": "pending" },
+    { "id": "asset-legacy-2-segment-1", "assetId": "asset-legacy-2", "sourceInPts": 0, "sourceOutPts": 6000, "included": true, "origin": "human-protected", "review": "approved", "locked": true }
+  ]
+}

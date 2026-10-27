@@ -1,0 +1,146 @@
+{
+  "version": 4,
+  "preset": "cctv",
+  "createdAt": "2026-10-02T06:00:00+07:00",
+  "assets": [
+    {
+      "id": "asset-fixture-1",
+      "path": "{{root}}/cam-a/clip-a.mp4",
+      "name": "clip-a.mp4",
+      "capturedAt": "2026-10-01T08:00:00+07:00",
+      "capturedAtSource": "embedded",
+      "importOrder": 0,
+      "durationPts": 21000,
+      "timebase": {
+        "num": 1,
+        "den": 1000
+      },
+      "status": "ready",
+      "sourceFingerprint": {
+        "size": 33,
+        "modifiedNs": 1790816400000000000
+      },
+      "relativeSourceFolder": "cam-a"
+    },
+    {
+      "id": "asset-fixture-2",
+      "path": "{{root}}/cam-b/clip-b.mp4",
+      "name": "clip-b.mp4",
+      "capturedAt": "2026-10-01T08:30:00+07:00",
+      "capturedAtSource": "filesystem",
+      "importOrder": 1,
+      "durationPts": 12500,
+      "timebase": {
+        "num": 1,
+        "den": 1000
+      },
+      "status": "error",
+      "sourceFingerprint": {
+        "size": 33,
+        "modifiedNs": 1790816400000000000
+      },
+      "relativeSourceFolder": "cam-b"
+    }
+  ],
+  "sourceOrder": [
+    "asset-fixture-1",
+    "asset-fixture-2"
+  ],
+  "manualOrder": false,
+  "groups": [
+    {
+      "id": "group-fixture-1",
+      "name": "cam-a · 2026-10-01",
+      "kind": "folder-date",
+      "assetIds": [
+        "asset-fixture-1"
+      ],
+      "order": 0,
+      "collapsed": false,
+      "pinnedMembership": false
+    },
+    {
+      "id": "group-fixture-2",
+      "name": "cam-b · 2026-10-01",
+      "kind": "folder-date",
+      "assetIds": [
+        "asset-fixture-2"
+      ],
+      "order": 1,
+      "collapsed": false,
+      "pinnedMembership": false
+    }
+  ],
+  "groupingConfig": {
+    "mode": "folder-date",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  "segments": [
+    {
+      "assetId": "asset-fixture-1",
+      "sourceInPts": 0,
+      "sourceOutPts": 2000,
+      "included": true,
+      "origin": "ai",
+      "review": "pending",
+      "locked": false,
+      "label": "Bright · pending cut",
+      "id": "asset-fixture-1-segment-1"
+    },
+    {
+      "assetId": "asset-fixture-1",
+      "sourceInPts": 2000,
+      "sourceOutPts": 19000,
+      "included": true,
+      "origin": "human-protected",
+      "review": "approved",
+      "locked": true,
+      "label": "Human protected",
+      "id": "asset-fixture-1-segment-2"
+    },
+    {
+      "assetId": "asset-fixture-1",
+      "sourceInPts": 19000,
+      "sourceOutPts": 21000,
+      "included": false,
+      "origin": "black",
+      "review": "approved",
+      "locked": false,
+      "label": "Black",
+      "id": "asset-fixture-1-segment-3"
+    }
+  ],
+  "preprocessingRuns": [
+    {
+      "id": "pre-fixture",
+      "mode": "auto-render",
+      "settingsSnapshot": {
+        "sample_fps": 5.0,
+        "enable_person_detection": true,
+        "timezone": "Asia/Ho_Chi_Minh",
+        "copyOnly": false
+      },
+      "assetResults": [
+        {
+          "assetId": "asset-fixture-1",
+          "status": "completed",
+          "output": "{{root}}/review/2026-10-01/clip-a.mp4",
+          "error": null
+        },
+        {
+          "assetId": "asset-fixture-2",
+          "status": "error",
+          "output": null,
+          "error": "Could not read video metadata"
+        }
+      ],
+      "startedAt": "2026-10-02T06:00:00+07:00",
+      "completedAt": "2026-10-02T06:05:00+07:00",
+      "status": "completed-with-errors"
+    }
+  ],
+  "editor": {
+    "mode": "sequence",
+    "isolatedAssetId": null
+  }
+}

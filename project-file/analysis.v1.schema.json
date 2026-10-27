@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://handyforge.app/cutsign/contracts/project-file/analysis.v1.schema.json",
+  "title": "CutSign single-video analysis payload, version 1",
+  "description": "What the engine command `analyze` prints (desktop/api.py analyze) and the oldest project shape. The desktop calls it AnalysisProject and turns it into a version 4 project (editor-model.ts migrateProject / applyAnalysis); the Rust exporter calls it LegacyProject and exports it directly. A document is read as version 1 when `version` is absent or 1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "duration", "regions"],
+  "properties": {
+    "version": {
+      "const": 1,
+      "description": "Optional: early files have no version field. analyze writes 1."
+    },
+    "source": { "type": "string", "minLength": 1, "description": "Absolute path of the analysed video." },
+    "duration": { "type": "number", "minimum": 0, "description": "Duration in seconds." },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:?\\d{2})?$",
+      "description": "Capture time, loose ISO-8601."
+    },
+    "createdAtSource": { "enum": ["embedded", "filename", "filesystem"] },
+    "reviewedAt": {
+      "type": ["string", "null"],
+      "description": "The desktop main process resets it to null after a fresh analysis."
+    },
+    "analysis": {
+      "type": "object",
+      "description": "Free-form analysis settings snapshot (detectHuman, sample rates). The desktop keeps blackMinCutSeconds as assets[].minCutSeconds (PROPERTY_PANE P2); nothing else reads it."
+    },
+    "regions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/region" }
+    },
+    "partial": {
+      "const": "audio",
+      "description": "Optional (CREATOR_SELECTS D13). Written by `analyze --audio-only`: regions hold only silence, loud and speech, and the desktop merges them into the asset instead of replacing every segment. Absent on a full analysis."
+    }
+  },
+  "$defs": {
+    "region": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "start", "end", "kind", "decision"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Required by the desktop type; neither reader uses it to build segments." },
+        "start": { "type": "number", "minimum": 0, "description": "Seconds." },
+        "end": { "type": "number", "minimum": 0, "description": "Seconds, exclusive." },
+        "kind": {
+          "enum": ["keep", "proposed-cut"],
+          "description": "keep is included footage, proposed-cut is excluded footage awaiting or after review."
+        },
+        "decision": {
+          "enum": ["keep", "drop", "pending"],
+          "description": "The exporter refuses a proposed-cut whose decision is pending, and exports a region when kind or decision is keep. analyze writes decision pending on an included ai region (kind keep), which the exporter does not block; the desktop blocks it through review instead."
+        },
+        "included": { "type": "boolean", "description": "Optional; the desktop derives it from kind and decision when absent." },
+        "origin": {
+          "enum": ["analysis-keep", "ai", "manual", "human-protected", "black", "unclassified", "silence", "speech", "loud"],
+          "description": "Optional; the desktop derives analysis-keep or ai from kind when absent."
+        },
+        "review": { "enum": ["pending", "approved"], "description": "Optional; the desktop derives it from kind and decision when absent." },
+        "locked": { "type": "boolean", "description": "Optional; human-protected is locked regardless." },
+        "label": { "type": "string" },
+        "audio": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["levelDb"],
+          "properties": {
+            "levelDb": { "type": "number", "maximum": 0, "description": "Level in dBFS." }
+          },
+          "description": "Optional, creator preset only: the same shape as project segment.audio (v4). Quietest level for silence, peak level for loud; absent for other origins."
+        }
+      }
+    }
+  }
+}

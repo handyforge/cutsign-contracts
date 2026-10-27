@@ -1,0 +1,469 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://handyforge.app/cutsign/contracts/project-file/project.v4.schema.json",
+  "title": "CutSign project file (.cutsign.json), versions 2, 3 and 4",
+  "description": "The project document shared by the CLI writer (services/audit_project.py), the desktop writer and reader (apps/desktop editor-model.ts migrateProject, project-store.ts) and the Rust exporter (model.rs, export.rs). Versions 2 and 3 have the same shape; version 4 adds `preset` (required), `presentation`, `silenceThreshold`, `asset.role`, `segment.audio` and three origins (CREATOR_SELECTS F1a). The desktop upgrades 2 and 3 to 4 on open with preset `cctv`, which keeps every pre-v4 behaviour. A writer must emit every field listed in `required` of each object: the list is the union of what every reader needs, so a document that passes this schema opens in the desktop and exports in Rust. Cross references (segments[].assetId, sourceOrder, groups[].assetIds pointing at assets[].id) are NOT expressible here; tests check them separately.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "createdAt", "assets", "sourceOrder", "segments"],
+  "if": { "properties": { "version": { "const": 4 } }, "required": ["version"] },
+  "then": { "properties": { "preset": true }, "required": ["preset"] },
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+      "description": "Optional stable project identity, a UUID (REALTIME_AGENT_EDITING_MCP M1b). The desktop session assigns one to a project that has none and writes it with the next autosave; it never rewrites a file the user opened. It survives edits and restarts and changes only when a new project is created. The CLI writer does not emit it; Rust and the engine ignore it."
+    },
+    "version": {
+      "enum": [2, 3, 4],
+      "description": "Document version. Readers reject any other value that carries `assets` with the error `[project.version_unsupported] Project version {n} was saved by a newer CutSign. Update the app to open it.` A document without `assets` is the version 1 analysis payload (analysis.v1.schema.json)."
+    },
+    "preset": {
+      "enum": ["cctv", "creator"],
+      "description": "Which analysis signals run and whether people lock footage. `cctv` keeps every pre-v4 behaviour; readers of v2/v3 documents default to `cctv`. Required from version 4 on (the `if`/`then` above), absent in version 2 and 3 documents. Rust and the engine validate it but do not act on it yet."
+    },
+    "presentation": {
+      "$ref": "#/$defs/presentation"
+    },
+    "silenceThreshold": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["levelDb", "seconds"],
+      "properties": {
+        "levelDb": { "type": "number", "maximum": 0, "description": "Audio below this level in dBFS counts as silence." },
+        "seconds": { "type": "number", "minimum": 0, "description": "Shortest quiet stretch that becomes a silence segment." }
+      },
+      "description": "Optional (version 4): the per-project silence threshold of preset `creator` (CREATOR_SELECTS feature D7). Absent means the engine default; v2/v3 documents never carry it. Rust and the engine validate it but do not read it yet."
+    },
+    "createdAt": {
+      "$ref": "#/$defs/timestamp",
+      "description": "When the project was first created. Required by the desktop type; the Rust exporter ignores it."
+    },
+    "reviewedAt": {
+      "$ref": "#/$defs/timestamp",
+      "description": "Last time a human edited a review decision. Written by the desktop only."
+    },
+    "assets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/asset" },
+      "description": "Every source video in the project, in import order. Required by the exporter."
+    },
+    "sourceOrder": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Asset ids in sequence order. The exporter walks this list and skips ids without an asset."
+    },
+    "manualOrder": {
+      "type": "boolean",
+      "description": "True once the user reordered sources by hand; the desktop then stops sorting by capture time. Absent means false."
+    },
+    "segments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/segment" },
+      "description": "Edit segments over source time. Required by the exporter."
+    },
+    "groups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/group" },
+      "description": "Media pool groups. Optional: the desktop rebuilds every group whose pinnedMembership is false on open, so only pinned groups survive a round trip unchanged."
+    },
+    "groupingConfig": {
+      "$ref": "#/$defs/groupingConfig"
+    },
+    "preprocessingRuns": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/preprocessingRun" },
+      "description": "History of preprocessing runs (CLI --pre and desktop Auto cut). Informational; no reader acts on it."
+    },
+    "editor": {
+      "$ref": "#/$defs/editor"
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2}(\\.\\d+)?)?(Z|[+-]\\d{2}:?\\d{2})?$",
+      "description": "Loose ISO-8601 date-time: Python isoformat() with offset and JavaScript toISOString() both match. Not `format: date-time` because strict ajv rejects unknown formats without ajv-formats."
+    },
+    "timebase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["num", "den"],
+      "properties": {
+        "num": { "type": "integer", "minimum": 1 },
+        "den": { "type": "integer", "minimum": 1 }
+      },
+      "description": "Rational seconds per pts unit. The exporter rejects non-positive values at export time; the CLI and the desktop write 1/1000."
+    },
+    "sourceFingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size", "modifiedNs"],
+      "properties": {
+        "size": { "type": "integer", "minimum": 0 },
+        "modifiedNs": {
+          "type": "integer",
+          "description": "File modification time in nanoseconds (Python st_mtime_ns). JavaScript numbers hold it only to about 2^53, so a desktop round trip may round the last digits."
+        }
+      },
+      "description": "Size and mtime used to detect a replaced source and to key caches."
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "path", "name", "capturedAt", "capturedAtSource", "importOrder", "durationPts", "timebase", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "`asset-` + FNV-1a 32-bit hash (UTF-16 code units, base 36) of the lower-cased path with `/` separators. fixtures/asset-id.json pins the hash for the desktop and the CLI."
+        },
+        "path": { "type": "string", "minLength": 1, "description": "Absolute path of the source video. Required by the exporter." },
+        "name": { "type": "string", "minLength": 1, "description": "File name shown in the media pool. Required by the desktop." },
+        "capturedAt": { "$ref": "#/$defs/timestamp", "description": "Capture time used for chronological ordering and date groups." },
+        "capturedAtSource": {
+          "enum": ["embedded", "filename", "filesystem", "import-order", "manual"],
+          "description": "Where capturedAt came from. The engine writes embedded, filename or filesystem; the desktop adds import-order (queued, not probed yet) and manual."
+        },
+        "importOrder": { "type": "integer", "minimum": 0, "description": "Stable tie-breaker when two assets share a capture time." },
+        "durationPts": { "type": "integer", "minimum": 0, "description": "Duration in timebase units; 0 while queued. Required by the exporter." },
+        "timebase": { "$ref": "#/$defs/timebase" },
+        "status": {
+          "enum": ["queued", "analyzing", "ready", "error"],
+          "description": "Analysis state. The exporter only renders assets whose status is ready."
+        },
+        "error": { "type": "string", "description": "Human readable reason when status is error. Desktop only." },
+        "sourceFingerprint": { "$ref": "#/$defs/sourceFingerprint" },
+        "relativeSourceFolder": {
+          "type": "string",
+          "description": "Parent folder relative to the input root (`.` for the root itself). The CLI always writes it; the desktop fills it from probe and uses it for folder groups."
+        },
+        "cameraLabel": { "type": "string", "description": "Optional camera name; no writer emits it yet." },
+        "role": {
+          "enum": ["camera", "audio", "screen"],
+          "description": "Optional (version 4): what the source carries in a creator project. No writer emits it yet; absent means camera."
+        },
+        "width": { "type": "integer", "minimum": 0, "description": "Frame width from the import probe. Desktop only (PROPERTY_PANE P1); absent in older projects and in CLI output." },
+        "height": { "type": "integer", "minimum": 0, "description": "Frame height from the import probe. Desktop only, optional." },
+        "fps": { "type": "number", "minimum": 0, "description": "Frame rate from the import probe. Desktop only, optional." },
+        "minCutSeconds": { "type": "number", "minimum": 0, "description": "Engine min_cut_seconds at the last analysis. Desktop only (PROPERTY_PANE P2 / SEGMENT_SMOOTHING S3); absent in CLI output and in older projects." }
+      }
+    },
+    "segment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "assetId", "sourceInPts", "sourceOutPts", "included", "origin", "review"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Unique within the project. Required by the desktop; the exporter ignores it." },
+        "assetId": { "type": "string", "minLength": 1, "description": "Owning asset. Must match an assets[].id (not checkable by this schema)." },
+        "sourceInPts": { "type": "integer", "minimum": 0 },
+        "sourceOutPts": { "type": "integer", "minimum": 0, "description": "Exclusive end. The exporter drops a piece whose end is not after its start or runs past the asset duration." },
+        "included": { "type": "boolean", "description": "Whether the segment is in the output. The exporter keeps only included segments." },
+        "origin": {
+          "enum": ["analysis-keep", "ai", "manual", "human-protected", "black", "unclassified", "silence", "speech", "loud"],
+          "description": "Who proposed the segment. human-protected means a person was detected; every reader MUST treat it as locked regardless of `locked`. silence, speech and loud (version 4) come from the audio analysis of preset `creator` and never lock."
+        },
+        "review": {
+          "enum": ["pending", "approved"],
+          "description": "Human review state. The exporter refuses a project with any pending segment."
+        },
+        "locked": {
+          "type": "boolean",
+          "description": "Optional, default false. Every reader MUST also treat origin == human-protected as locked. The CLI writes it explicitly; the desktop sets it on open; the exporter ORs it with the origin check."
+        },
+        "label": { "type": "string", "description": "Short human label (for example `Bright · pending cut`). The CLI writes it on every segment." },
+        "audio": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["levelDb"],
+          "properties": {
+            "levelDb": { "type": "number", "maximum": 0, "description": "Level in dBFS." }
+          },
+          "description": "Optional (version 4). Quietest level for `silence`, peak level for `loud`; absent for other origins. The renderer builds the card text from origin and this number, never from `label`."
+        },
+        "source": {
+          "$ref": "#/$defs/proposalSource",
+          "description": "Optional (version 4, AGENT_CHAT_EDIT D7'). Set on a proposal the in-app Assistant made from a review comment (origin `ai`, review `pending` until decided) and kept after the decision; the card shows it as a chip. `label` then holds the reason code. The exporter and the engine ignore it."
+        }
+      }
+    },
+    "proposalSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "comment", "index", "model"],
+      "properties": {
+        "kind": { "const": "assistant" },
+        "comment": { "type": "string", "maxLength": 500, "description": "The review comment the proposal came from, cut to 500 characters." },
+        "index": { "type": "integer", "minimum": 0, "description": "0-based position of the comment in what the user pasted." },
+        "model": { "type": "string", "minLength": 1, "description": "Model that classified the comment." },
+        "measurements": {
+          "type": "object",
+          "additionalProperties": { "type": "number" },
+          "description": "Numbers the card's reason line is built from (shake variance and threshold in px, scene time in s)."
+        }
+      },
+      "description": "Provenance of an Assistant proposal (AGENT_CHAT_EDIT D7'): who asked, in which comment, through which model."
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "kind", "assetIds", "order", "collapsed", "pinnedMembership"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "kind": {
+          "enum": ["session", "date", "folder", "filename", "manual", "folder-date"],
+          "description": "How the group was formed. folder-date is written by the CLI (one group per folder and local day)."
+        },
+        "assetIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "order": { "type": "integer", "minimum": 0 },
+        "collapsed": { "type": "boolean" },
+        "pinnedMembership": {
+          "type": "boolean",
+          "description": "True for groups the desktop must keep as-is (manual sections). Groups with false are rebuilt from groupingConfig on open."
+        }
+      }
+    },
+    "groupingConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "timezone"],
+      "properties": {
+        "mode": {
+          "enum": ["date", "folder", "session", "filename", "folder-date"],
+          "description": "Automatic grouping rule. The desktop offers date, folder, session and filename; the CLI writes folder-date, which the desktop groups like date."
+        },
+        "timezone": { "type": "string", "minLength": 1, "description": "IANA zone used to cut local days." },
+        "sessionGapMinutes": { "type": "number", "exclusiveMinimum": 0, "description": "Desktop session grouping gap; the desktop writes 30 when absent." },
+        "filenamePattern": { "type": "string" }
+      }
+    },
+    "assetResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "status"],
+      "properties": {
+        "assetId": { "type": "string", "minLength": 1 },
+        "status": {
+          "enum": ["completed", "skipped", "error", "ready"],
+          "description": "Per-asset render outcome. `ready` appears when the CLI has no render record for an analysed asset and falls back to the asset status (build_audit_project)."
+        },
+        "output": { "type": ["string", "null"], "description": "Rendered review file, or null when nothing was written." },
+        "error": { "type": ["string", "null"] }
+      }
+    },
+    "preprocessingRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "mode", "settingsSnapshot", "assetResults", "startedAt", "status"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "mode": { "enum": ["proposal", "auto-render"] },
+        "settingsSnapshot": {
+          "type": "object",
+          "description": "Free-form copy of the settings the run used, kept for audit. Deliberately open: CLI and desktop snapshot different settings."
+        },
+        "assetResults": { "type": "array", "items": { "$ref": "#/$defs/assetResult" } },
+        "startedAt": { "$ref": "#/$defs/timestamp" },
+        "completedAt": { "$ref": "#/$defs/timestamp" },
+        "status": {
+          "enum": ["completed", "completed-with-errors", "cancelled"],
+          "description": "Run outcome. The CLI writes completed or completed-with-errors; the desktop also writes cancelled."
+        }
+      }
+    },
+    "editor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "isolatedAssetId"],
+      "properties": {
+        "mode": { "enum": ["sequence", "isolated"] },
+        "isolatedAssetId": { "type": ["string", "null"] }
+      },
+      "description": "Last editor view. Optional; the desktop opens in sequence mode when absent."
+    },
+    "overlay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" }
+      },
+      "description": "One burn-in overlay. Only the switch is defined in version 4; position, format and clock source arrive as optional fields with the round that renders them (contracts README rule 1: an optional field every reader can ignore is not a bump)."
+    },
+    "joint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["afterSegmentId", "kind", "durationMs", "gapCaption"],
+      "properties": {
+        "afterSegmentId": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["cut", "dip-black"] },
+        "durationMs": { "type": "integer", "minimum": 0 },
+        "gapCaption": { "type": "boolean", "description": "Show the time gap (for example `+12 min`) during the dip." }
+      },
+      "description": "How the output joins after one segment. Absent joints are plain cuts."
+    },
+    "note": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "pts", "durationPts", "text"],
+      "properties": {
+        "assetId": { "type": "string", "minLength": 1 },
+        "pts": { "type": "integer", "minimum": 0 },
+        "durationPts": { "type": "integer", "minimum": 0 },
+        "text": { "type": "string" },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,80}$",
+          "description": "Optional (AGENT_CHAT_EDIT A2b). Every note the desktop writes has one (`note-<seed>`, repeatable on redo), so a later edit can name it."
+        },
+        "source": { "$ref": "#/$defs/proposalSource", "description": "Optional: set when the Assistant wrote the note." },
+        "assetRef": {
+          "type": "string",
+          "pattern": "^[a-z0-9/_-]{1,80}$",
+          "description": "Optional (OVERLAY_CHANNEL O2b, D20): the id of a shelf asset attached to the note (`fluent/1f602`, `mine/<12 hex>`). A brief copies its file next to the anchor; an id no longer on the shelf is skipped. The exporter and the engine do not read it."
+        }
+      },
+      "description": "Reviewer note at a source time; also the source of soft subtitles."
+    },
+    "rect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "w", "h"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 },
+        "w": { "type": "number", "minimum": 0, "maximum": 1 },
+        "h": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "description": "Box as fractions of the frame: a redaction's rect and an image overlay clip's placement (OVERLAY_CHANNEL D21)."
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "inPts", "outPts", "rect", "style"],
+      "properties": {
+        "assetId": { "type": "string", "minLength": 1 },
+        "inPts": { "type": "integer", "minimum": 0 },
+        "outPts": { "type": "integer", "minimum": 0 },
+        "rect": { "$ref": "#/$defs/rect" },
+        "style": { "enum": ["pixelate", "blur", "solid"] },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,80}$",
+          "description": "Optional (AGENT_CHAT_EDIT A3a). Every box the desktop writes has one (`redaction-<seed>`, repeatable on redo), so a later edit can name it."
+        },
+        "source": { "$ref": "#/$defs/proposalSource", "description": "Optional: set when the Assistant asked for the box." },
+        "needsPlacement": {
+          "type": "boolean",
+          "description": "Optional (AGENT_CHAT_EDIT D10): true while the box sits at its default place and nobody has moved it onto what it must hide. Every export refuses while one is true (desktop and backend)."
+        }
+      },
+      "description": "Static redaction box over a source time range, burned into the export (AGENT_CHAT_EDIT D29)."
+    },
+    "overlayAnchor": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "assetId", "pts", "durationPts"],
+          "properties": {
+            "kind": { "const": "source" },
+            "assetId": { "type": "string", "minLength": 1 },
+            "pts": { "type": "integer", "minimum": 0 },
+            "durationPts": { "type": "integer", "minimum": 1 }
+          },
+          "description": "Glued to the footage of one clip: starts at `pts` in the clip's timebase. A cut inside the range cuts the overlay with it (OVERLAY_CHANNEL D7 b)."
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "startSec", "endSec", "revision", "outputMapHash"],
+          "properties": {
+            "kind": { "const": "output" },
+            "startSec": { "type": "number", "minimum": 0 },
+            "endSec": { "type": "number", "minimum": 0 },
+            "revision": { "type": "integer", "minimum": 0 },
+            "outputMapHash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "sha256 of the output map pieces that start before `endSec`, at import (OVERLAY_CHANNEL D7). Another hash now means the clip is out of date." }
+          },
+          "description": "Seconds of the output video, for a clip that spans a joint. Valid while the output map up to `endSec` is the one it was imported on."
+        }
+      ]
+    },
+    "overlayClip": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "file", "anchor", "enabled", "briefRevision", "fileHash"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,80}$" },
+        "file": { "type": "string", "minLength": 1, "description": "Absolute path of the alpha video, or of a still image of the shelf (`kind: image`), like `assets[].path`. Referenced, never copied (OVERLAY_CHANNEL D8)." },
+        "anchor": { "$ref": "#/$defs/overlayAnchor" },
+        "enabled": { "type": "boolean" },
+        "label": { "type": "string", "maxLength": 200, "description": "Optional: the manifest's label, else the file name." },
+        "fromNoteId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,80}$", "description": "Optional: the note the brief anchor came from." },
+        "briefRevision": { "type": "integer", "minimum": 0, "description": "The project revision the manifest names; 0 for a shelf sticker (`kind: image`), which has no brief (OVERLAY_CHANNEL D21)." },
+        "fileHash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "sha256 of the file at import; the export checks it again (D8′)." },
+        "fileStat": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["size", "mtimeMs"],
+          "properties": {
+            "size": { "type": "integer", "minimum": 0 },
+            "mtimeMs": { "type": "number", "minimum": 0 }
+          },
+          "description": "Optional: size and modification time at import, the fast \"file changed\" check (D8′)."
+        },
+        "acceptedMapHash": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "Optional (D7′): the output map hash a person chose to use the clip on although it is out of date." },
+        "manifestId": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Optional: `clips[].id` of the manifest, so importing it again replaces this clip." },
+        "width": { "type": "integer", "minimum": 1 },
+        "height": { "type": "integer", "minimum": 1 },
+        "fps": { "type": "number", "exclusiveMinimum": 0 },
+        "kind": { "enum": ["video", "image"], "description": "Optional (OVERLAY_CHANNEL D21): `image` is a still PNG / WebP placed from the shelf; absent means `video`, the full-frame alpha video of O2." },
+        "assetRef": { "type": "string", "pattern": "^[a-z0-9/_-]{1,80}$", "description": "Optional (D21): the shelf asset id the image came from (same pattern as `note.assetRef`). The preview loads it by id; the export reads `file`." },
+        "placement": { "$ref": "#/$defs/rect", "description": "Optional (D21): where an image clip sits, as fractions of the frame. Absent means the clip covers the frame (D4)." }
+      },
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "image" } } },
+      "then": { "properties": { "placement": true, "assetRef": true }, "required": ["placement", "assetRef"] },
+      "description": "One alpha video, or one still image of the shelf, laid over the output (OVERLAY_CHANNEL D5, D21). Whether it is still in step with the timeline is derived, never stored (D7′)."
+    },
+    "speedChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["segmentId", "factor"],
+      "properties": {
+        "segmentId": { "type": "string", "minLength": 1 },
+        "factor": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "overlays": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "timestamp": { "$ref": "#/$defs/overlay" },
+            "cameraLabel": { "$ref": "#/$defs/overlay" },
+            "titleCard": { "$ref": "#/$defs/overlay" }
+          }
+        },
+        "joints": { "type": "array", "items": { "$ref": "#/$defs/joint" }, "default": [] },
+        "notes": { "type": "array", "items": { "$ref": "#/$defs/note" }, "default": [] },
+        "redactions": { "type": "array", "items": { "$ref": "#/$defs/redaction" }, "default": [] },
+        "overlayClips": { "type": "array", "items": { "$ref": "#/$defs/overlayClip" }, "default": [], "description": "Optional (OVERLAY_CHANNEL O2): imported alpha videos. Not the burn-in switches of `overlays`." },
+        "encodeAcknowledged": { "type": "boolean", "description": "Optional (OVERLAY_CHANNEL D11): the person has seen once that boxes and overlays make the export re-encode." },
+        "audio": { "enum": ["original", "mute", "normalize"], "description": "Output audio treatment; absent means original." },
+        "speed": { "type": "array", "items": { "$ref": "#/$defs/speedChange" }, "default": [] },
+        "look": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "object", "additionalProperties": false, "properties": {} }
+          ],
+          "description": "Declared picture adjustment; null means untouched. Its fields arrive with the round that renders it, and the export audit must then record it as enhanced."
+        }
+      },
+      "description": "Optional (version 4): how the output is presented (BASIC_EDITING research section 3.6). Every field may be absent or empty. The exporter reads `redactions` (burned in, AGENT_CHAT_EDIT D29) and `notes` (edit list comments, D30) and reads past the rest; the engine ignores it."
+    }
+  }
+}

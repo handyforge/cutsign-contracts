@@ -1,0 +1,21 @@
+{
+  "version": 3,
+  "createdAt": "2026-10-01T08:00:00.000Z",
+  "assets": [
+    {
+      "id": "asset-invalid-1",
+      "path": "{{root}}/invalid-1.mp4",
+      "name": "invalid-1.mp4",
+      "capturedAt": "2026-10-01T08:00:00.000Z",
+      "capturedAtSource": "filesystem",
+      "importOrder": 0,
+      "durationPts": 5000,
+      "timebase": { "num": 1, "den": 1000 },
+      "status": "ready"
+    }
+  ],
+  "sourceOrder": ["asset-invalid-1"],
+  "segments": [
+    { "id": "segment-invalid-1", "assetId": "asset-invalid-1", "sourceInPts": 0, "sourceOutPts": 5000, "included": true, "origin": "manual", "review": "maybe" }
+  ]
+}
