@@ -453,6 +453,16 @@
         "redactions": { "type": "array", "items": { "$ref": "#/$defs/redaction" }, "default": [] },
         "overlayClips": { "type": "array", "items": { "$ref": "#/$defs/overlayClip" }, "default": [], "description": "Optional (OVERLAY_CHANNEL O2): imported alpha videos. Not the burn-in switches of `overlays`." },
         "encodeAcknowledged": { "type": "boolean", "description": "Optional (OVERLAY_CHANNEL D11): the person has seen once that boxes and overlays make the export re-encode." },
+        "subtitles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["soft", "sidecar"],
+          "properties": {
+            "soft": { "type": "boolean", "description": "Write the notes that have a duration as a soft subtitle track (`mov_text`) inside the exported MP4." },
+            "sidecar": { "type": "boolean", "description": "Also write the same cues as `<output name>.srt` beside the exported file." }
+          },
+          "description": "Optional (MCP_AGENT_CONTROL C3, D9): what a video export makes of timed notes. Absent means `{ soft: true, sidecar: false }`. Cues are mapped from source time to output time; a note inside a removed range is dropped. The edit list ignores it."
+        },
         "audio": { "enum": ["original", "mute", "normalize"], "description": "Output audio treatment; absent means original." },
         "speed": { "type": "array", "items": { "$ref": "#/$defs/speedChange" }, "default": [] },
         "look": {
@@ -463,7 +473,7 @@
           "description": "Declared picture adjustment; null means untouched. Its fields arrive with the round that renders it, and the export audit must then record it as enhanced."
         }
       },
-      "description": "Optional (version 4): how the output is presented (BASIC_EDITING research section 3.6). Every field may be absent or empty. The exporter reads `redactions` (burned in, AGENT_CHAT_EDIT D29) and `notes` (edit list comments, D30) and reads past the rest; the engine ignores it."
+      "description": "Optional (version 4): how the output is presented (BASIC_EDITING research section 3.6). Every field may be absent or empty. The exporter reads `redactions` (burned in, AGENT_CHAT_EDIT D29), `notes` (edit list comments, D30; soft subtitles when timed, MCP_AGENT_CONTROL D9), `overlayClips` and `subtitles`, and reads past the rest; the engine ignores it."
     }
   }
 }

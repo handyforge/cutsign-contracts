@@ -34,7 +34,8 @@
       { "id": "overlay-s4-1", "file": "{{root}}/creator-1-overlay/renders/sponsor.webm", "anchor": { "kind": "source", "assetId": "asset-creator-1", "pts": 500, "durationPts": 4000 }, "enabled": true, "label": "Sponsor card", "fromNoteId": "note-s2", "briefRevision": 7, "fileHash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", "fileStat": { "size": 48213, "mtimeMs": 1760864400123.5 }, "manifestId": "sponsor", "width": 1920, "height": 1080, "fps": 30 },
       { "id": "overlay-s4-2", "kind": "image", "file": "{{root}}/packs/fluent-emoji/3d/1f602.png", "assetRef": "fluent/1f602", "placement": { "x": 0.77, "y": 0.7, "w": 0.18, "h": 0.18 }, "anchor": { "kind": "source", "assetId": "asset-creator-1", "pts": 6000, "durationPts": 3000 }, "enabled": true, "label": "Face with tears of joy", "briefRevision": 0, "fileHash": "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8", "fileStat": { "size": 44817, "mtimeMs": 1760864400456 }, "width": 256, "height": 256 }
     ],
-    "encodeAcknowledged": false
+    "encodeAcknowledged": false,
+    "subtitles": { "soft": true, "sidecar": false }
   },
   "silenceThreshold": { "levelDb": -35, "seconds": 0.4 }
 }

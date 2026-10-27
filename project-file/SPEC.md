@@ -166,7 +166,8 @@ All optional; absent means "nothing".
 
 | Field | Meaning | Who acts on it |
 |---|---|---|
-| `notes[]` | `{ assetId, pts, durationPts, text, id?, source?, assetRef? }`: reviewer note at a source time; also the soft-subtitle source and `* COMMENT:` lines in the EDL | desktop, Rust (EDL) |
+| `notes[]` | `{ assetId, pts, durationPts, text, id?, source?, assetRef? }`: reviewer note at a source time; `* COMMENT:` lines in the EDL; a note with `durationPts > 0` and text is also a soft-subtitle cue of a video export | desktop, Rust (EDL, export) |
+| `subtitles` | `{ soft, sidecar }`, both required when present; absent means `{ soft: true, sidecar: false }`: timed notes become a `mov_text` track inside the MP4, and with `sidecar` also `<output name>.srt` beside it. Cues are mapped to output time; a note inside a removed range is dropped, one cut by a piece edge is clipped | desktop, Rust |
 | `redactions[]` | `{ assetId, inPts, outPts, rect, style, id?, source?, needsPlacement? }`: box burned into the export; `rect` is fractions of the frame; **any `needsPlacement: true` blocks export** | desktop, Rust |
 | `overlayClips[]` | alpha videos (`kind` absent / `video`, full frame) or shelf stickers (`kind: "image"`, needs `placement` + `assetRef`) laid over the output; anchored to a clip (`anchor.kind: "source"`) or to output seconds (`anchor.kind: "output"`, pinned to an output-map hash) | desktop, Rust |
 | `joints[]` | how the output joins after a segment: `cut` or `dip-black` with `durationMs`, optional gap caption | desktop, Rust |
@@ -181,7 +182,7 @@ All optional; absent means "nothing".
 | Reader | Reads | Ignores |
 |---|---|---|
 | Desktop (`apps/desktop/shared/project/project-document.ts migrateProject`) | everything; upgrades 2 / 3 → 4 | — |
-| Rust exporter (`crates/cutsign-backend/src/model.rs`, `export.rs`) | `assets`, `sourceOrder`, `segments`, `presentation.redactions` / `notes` / `overlayClips` / `audio` | `preset`, `groups`, `editor`, `preprocessingRuns`, `silenceThreshold`, provenance |
+| Rust exporter (`crates/cutsign-backend/src/model.rs`, `export.rs`) | `assets`, `sourceOrder`, `segments`, `presentation.redactions` / `notes` / `overlayClips` / `subtitles` / `audio` | `preset`, `groups`, `editor`, `preprocessingRuns`, `silenceThreshold`, provenance |
 | Engine (`src/video_preprocessor/desktop/api.py preprocess_project`) | `assets`, `segments` | `preset`, `presentation` |
 | CLI writer (`services/audit_project.py`) | writes v4 from an analysis run (`--pre`, `--preset`) | — |
 
