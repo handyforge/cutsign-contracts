@@ -216,7 +216,7 @@ test fails when this section is out of date.
 
 <!-- BEGIN GENERATED TOOL REFERENCE: scripts/mcp-tools-doc.mjs, do not edit by hand -->
 
-27 tools. Every write takes `expectedRevision` (required) and `requestId` (optional); see "Writing" above.
+29 tools. Every write takes `expectedRevision` (required) and `requestId` (optional); see "Writing" above.
 
 | Tool | Kind | Title |
 |---|---|---|
@@ -238,6 +238,8 @@ test fails when this section is out of date.
 | [`propose_range`](#propose_range) | write | Propose a cut |
 | [`add_note`](#add_note) | write | Add note |
 | [`add_notes`](#add_notes) | write | Add notes |
+| [`update_note`](#update_note) | write | Update note |
+| [`remove_note`](#remove_note) | write | Remove note |
 | [`add_redaction`](#add_redaction) | write | Add redaction |
 | [`update_overlay_clip`](#update_overlay_clip) | write | Update overlay clip |
 | [`remove_overlay_clip`](#remove_overlay_clip) | write | Remove overlay clip |
@@ -468,6 +470,33 @@ No parameters.
 |---|---|---|---|
 | `lines` | array of { assetId, pts, durationPts, text } (≥ 1, ≤ 500 items) | yes |  |
 | `idSeed` | string `^[A-Za-z0-9_-]{1,64}$` | no | Makes the ids this call creates predictable (letters, digits, - and _). Default: derived from requestId. |
+| `expectedRevision` | integer ≥ 0 | yes | The revision you read (get_app_session, list_segments, ...). Another writer since then answers revision_conflict. |
+| `requestId` | string (≤ 100 chars) | no | Idempotency key: a retry with the same id returns the first answer. |
+
+### update_note
+
+**Update note.** Changes a note's text, clip-local pts or durationPts (at least one); it stays on its clip and inside it. Answers the command result: revision, transactionId, affected.
+
+`readOnlyHint: false` · `destructiveHint: false` · `openWorldHint: false`
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `id` | string `^[A-Za-z0-9_-]{1,80}$` | yes | A note id (list_notes). |
+| `text` | string (≤ 500 chars) | no | New text, 1 to 500 characters. |
+| `pts` | integer ≥ 0 | no | New clip-local start; the note must stay inside its clip. |
+| `durationPts` | integer ≥ 0 | no | New length; 0 makes it a point note, > 0 a subtitle line. |
+| `expectedRevision` | integer ≥ 0 | yes | The revision you read (get_app_session, list_segments, ...). Another writer since then answers revision_conflict. |
+| `requestId` | string (≤ 100 chars) | no | Idempotency key: a retry with the same id returns the first answer. |
+
+### remove_note
+
+**Remove note.** Deletes a note; the shelf asset attached to it is detached, not deleted. An overlay clip made from the note (fromNoteId) stays on the timeline. Answers the command result: revision, transactionId, affected.
+
+`readOnlyHint: false` · `destructiveHint: false` · `openWorldHint: false`
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `id` | string `^[A-Za-z0-9_-]{1,80}$` | yes | A note id (list_notes). |
 | `expectedRevision` | integer ≥ 0 | yes | The revision you read (get_app_session, list_segments, ...). Another writer since then answers revision_conflict. |
 | `requestId` | string (≤ 100 chars) | no | Idempotency key: a retry with the same id returns the first answer. |
 

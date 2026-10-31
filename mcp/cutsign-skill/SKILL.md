@@ -75,6 +75,8 @@ Every write below also takes `expectedRevision` (required) and `requestId` (opti
 | Suggest a cut for review | `propose_range { assetId, inPts, outPts, source: { kind: "assistant", comment, index, model }, reasonCode }` | Shows as a pending card with your model name |
 | A note at a time | `add_note { assetId, pts, durationPts, text }` | `durationPts > 0` makes it a subtitle line; notes also become EDL comments |
 | Many lines at once (captions, chapter notes) | `add_notes { lines: [{ assetId, pts, durationPts, text }] }` | ≤ 500 lines, text ≤ 500 characters, one Undo step; answers `noteIds` in order |
+| Fix a note's words, time or length | `update_note { id, text?, pts?, durationPts? }` | At least one field; the note stays inside its clip (`command.invalid_result` otherwise); ids from `list_notes` |
+| Delete a note | `remove_note { id }` | An attached shelf asset is detached (the image stays on the shelf); an overlay clip made from it (`fromNoteId`) stays |
 | Subtitles from a file | `import_subtitles { file, assetId }` | See below |
 | Subtitle export switches | `set_subtitles { soft?, sidecar? }` | Soft track in the MP4 (default on), `.srt` beside it (default off) |
 | Hide something | `add_redaction { assetId, inPts, outPts, rect, style }` | `rect` is fractions of the frame; `style` `pixelate` / `blur` / `solid`; the person confirms placement before export |
