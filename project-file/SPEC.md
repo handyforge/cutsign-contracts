@@ -1,8 +1,9 @@
 # CutSign project file (`.cutsign.json`) — specification for outside readers and writers
 
-**Version of this text:** 1 (2026-10-27) · **Schema:** [`project.v4.schema.json`](./project.v4.schema.json) (JSON Schema
+**Version of this text:** 1 (2026-10-27; §1 corrected 2026-11-02) · **Schema:** [`project.v4.schema.json`](./project.v4.schema.json) (JSON Schema
 2020-12, `$id https://handyforge.app/cutsign/contracts/project-file/project.v4.schema.json`) · **Fixtures:**
-[`fixtures/`](./fixtures/) · **Change rules:** [`../README.md`](../README.md) §Change rules (restated in §12 below).
+[`fixtures/`](./fixtures/) · **Change rules:** [`../README.md`](../README.md) §"Luật đổi schema" (Vietnamese; the rules are
+restated in §9 below).
 
 This document is written for someone who has never seen the app: a script, an MCP tool, an AI agent, or another editor that
 wants to read or write a CutSign project. The schema is the arbiter; this text explains what the fields mean, what the
@@ -16,8 +17,12 @@ readers do with them, and what we promise about stability. Where the two disagre
   in the output, who proposed each range, whether a person approved it, and how the output is presented (notes, boxes,
   overlays, joins).
 - It references media by absolute path (`assets[].path`, `presentation.overlayClips[].file`). Nothing is embedded.
-- The app autosaves the open project to `autosave.cutsign.json` next to the project; the project the user opened is only
-  rewritten on an explicit save.
+- Where the app writes (corrected 2026-11-02; the text of 2026-10-27 was wrong): today the app keeps the open project in
+  one autosave file inside its own profile (`<profile>/projects/autosave.cutsign.json`) and **never writes the file the
+  user opened**; edits made after opening a file exist only in that autosave, which the next project replaces. Treat a
+  file you hand to the app as a snapshot. A coming release changes this (feature `PROJECT_SAVE`, round S1, pending): an
+  opened version 4 `.cutsign.json` becomes the project and is rewritten after every edit, and projects without a file
+  are kept as drafts in the profile. This line will say so when that release ships.
 
 ## 2. Stability promise
 
@@ -169,7 +174,7 @@ All optional; absent means "nothing".
 | `notes[]` | `{ assetId, pts, durationPts, text, id?, source?, assetRef? }`: reviewer note at a source time; `* COMMENT:` lines in the EDL; a note with `durationPts > 0` and text is also a soft-subtitle cue of a video export | desktop, Rust (EDL, export) |
 | `subtitles` | `{ soft, sidecar }`, both required when present; absent means `{ soft: true, sidecar: false }`: timed notes become a `mov_text` track inside the MP4, and with `sidecar` also `<output name>.srt` beside it. Cues are mapped to output time; a note inside a removed range is dropped, one cut by a piece edge is clipped | desktop, Rust |
 | `redactions[]` | `{ assetId, inPts, outPts, rect, style, id?, source?, needsPlacement? }`: box burned into the export; `rect` is fractions of the frame; **any `needsPlacement: true` blocks export** | desktop, Rust |
-| `overlayClips[]` | alpha videos (`kind` absent / `video`, full frame) or shelf stickers (`kind: "image"`, needs `placement` + `assetRef`) laid over the output; anchored to a clip (`anchor.kind: "source"`) or to output seconds (`anchor.kind: "output"`, pinned to an output-map hash) | desktop, Rust |
+| `overlayClips[]` | alpha videos (`kind` absent / `video`, full frame), shelf stickers (`kind: "image"`, needs `placement` + `assetRef`) or videos in a box (`kind` `video` with a `placement` smaller than the frame: picture-in-picture, animated stickers; optional `assetRef`; optional `loop`, `audio` `mute`/`mix` and `gainDb` −24…12 on such a video only — V2) laid over the output; optional `role` (`captions`, `text`, `sticker`, `pip` — R1, D24) says what a clip is for the app's lane, list and inspector, absent means other, and no exporter reads it; anchored to a clip (`anchor.kind: "source"`) or to output seconds (`anchor.kind: "output"`, pinned to an output-map hash) | desktop, Rust |
 | `joints[]` | how the output joins after a segment: `cut` or `dip-black` with `durationMs`, optional gap caption | desktop, Rust |
 | `overlays` | burn-in switches `timestamp`, `cameraLabel`, `titleCard` (`{ enabled }`) | desktop |
 | `audio` | `original` (default), `mute`, `normalize` | Rust |
@@ -204,7 +209,7 @@ The schema cannot express cross references. Check yourself that every `segments[
 `groups[].assetIds[]` entry names an `assets[].id` (`fixtures/invalid/orphan-segment.json` validates but is broken). A
 `cutsign validate` command that does both is planned (BRD `OPEN_EDITOR_FOR_CREATORS_AND_AGENTS` P3).
 
-## 12. Change rules
+## 12. Change rules (restated from `../README.md`)
 
 1. A shape change bumps `version`, adds a fixture and turns the three language test suites red then green. An optional field
    every reader can ignore does not bump, but enters the schema in the same commit as the code that writes it.

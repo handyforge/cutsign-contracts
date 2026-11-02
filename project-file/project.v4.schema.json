@@ -396,7 +396,7 @@
       "required": ["id", "file", "anchor", "enabled", "briefRevision", "fileHash"],
       "properties": {
         "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,80}$" },
-        "file": { "type": "string", "minLength": 1, "description": "Absolute path of the alpha video, or of a still image of the shelf (`kind: image`), like `assets[].path`. Referenced, never copied (OVERLAY_CHANNEL D8)." },
+        "file": { "type": "string", "minLength": 1, "description": "Absolute path of the alpha video, or of a video / still of My shelf (a still is `kind: image`), like `assets[].path`. Referenced, never copied (OVERLAY_CHANNEL D8)." },
         "anchor": { "$ref": "#/$defs/overlayAnchor" },
         "enabled": { "type": "boolean" },
         "label": { "type": "string", "maxLength": 200, "description": "Optional: the manifest's label, else the file name." },
@@ -418,13 +418,17 @@
         "width": { "type": "integer", "minimum": 1 },
         "height": { "type": "integer", "minimum": 1 },
         "fps": { "type": "number", "exclusiveMinimum": 0 },
-        "kind": { "enum": ["video", "image"], "description": "Optional (OVERLAY_CHANNEL D21): `image` is a still PNG / WebP placed from the shelf; absent means `video`, the full-frame alpha video of O2." },
-        "assetRef": { "type": "string", "pattern": "^[a-z0-9/_-]{1,80}$", "description": "Optional (D21): the shelf asset id the image came from (same pattern as `note.assetRef`). The preview loads it by id; the export reads `file`." },
-        "placement": { "$ref": "#/$defs/rect", "description": "Optional (D21): where an image clip sits, as fractions of the frame. Absent means the clip covers the frame (D4)." }
+        "kind": { "enum": ["video", "image"], "description": "Optional (OVERLAY_CHANNEL D21, D23): `image` is a still placed from the shelf; `video` (or absent) is a video — full-frame when it has no `placement`, in a box when it has one (picture-in-picture, an animated sticker)." },
+        "assetRef": { "type": "string", "pattern": "^[a-z0-9/_-]{1,80}$", "description": "Optional (D21, D23): the shelf asset id the image or the placed video came from (same pattern as `note.assetRef`). The preview loads an image by id; the export reads `file`." },
+        "placement": { "$ref": "#/$defs/rect", "description": "Optional (D21, D23): where the clip sits, stills and videos, as fractions of the frame; absent means the clip covers the frame (D4). A video's box is smaller than the frame (the app refuses one that covers it, `overlay.needs_placement`)." },
+        "loop": { "type": "boolean", "description": "Optional (OVERLAY_CHANNEL V2, D23.7), a video with a `placement` only: repeat the file over the clip's range. Absent: play once, then hold the last frame." },
+        "audio": { "enum": ["mute", "mix"], "description": "Optional (V2, D23.7), a video with a `placement` only: `mix` keeps the file's sound in the export (a full encode), `mute` or absent drops it." },
+        "gainDb": { "type": "integer", "minimum": -24, "maximum": 12, "description": "Optional (V2, D23.7), with `audio: mix` only: the level of the kept sound in whole dB. Absent: 0. The app holds the 'placed video only' rules of the three fields; the schema holds their shapes." },
+        "role": { "enum": ["captions", "text", "sticker", "pip"], "description": "Optional (OVERLAY_CHANNEL D24): what the clip is, for the app's lane, list and inspector — captions, text (titles, lower thirds, cards), sticker, pip. Absent: other; the app infers sticker for an image or GIF and pip for an MP4 in a box. Never read by the exporter." }
       },
       "if": { "required": ["kind"], "properties": { "kind": { "const": "image" } } },
       "then": { "properties": { "placement": true, "assetRef": true }, "required": ["placement", "assetRef"] },
-      "description": "One alpha video, or one still image of the shelf, laid over the output (OVERLAY_CHANNEL D5, D21). Whether it is still in step with the timeline is derived, never stored (D7′)."
+      "description": "One alpha video, one still image of the shelf, or one video in a box, laid over the output (OVERLAY_CHANNEL D5, D21, D23). Whether it is still in step with the timeline is derived, never stored (D7′)."
     },
     "speedChange": {
       "type": "object",
