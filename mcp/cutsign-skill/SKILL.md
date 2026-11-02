@@ -80,14 +80,15 @@ Every write below also takes `expectedRevision` (required) and `requestId` (opti
 | Subtitles from a file | `import_subtitles { file, assetId }` | See below |
 | Subtitle export switches | `set_subtitles { soft?, sidecar? }` | Soft track in the MP4 (default on), `.srt` beside it (default off) |
 | Hide something | `add_redaction { assetId, inPts, outPts, rect, style }` | `rect` is fractions of the frame; `style` `pixelate` / `blur` / `solid`; the person confirms placement before export |
-| Sticker (PNG / WebP) | `add_overlay_clip { file, anchor, placement? }` | Goes to the person's "My shelf" (not copied); `anchor` must be `source` (default 3 s) |
-| Animation / lower third / styled text / video overlay | `add_overlay_clip { file, anchor, importAnyway? }` | `file` is a VP9 **alpha** WebM, ProRes 4444 MOV, or a folder of PNG frames you rendered; same frame size as the project (1 %) |
-| Change or remove an overlay | `update_overlay_clip { id, enabled?, label?, anchor?, placement? }`, `remove_overlay_clip { id }` | Removing leaves the file on disk |
+| Sticker (PNG / WebP) | `add_overlay_clip { file, anchor, placement?, role? }` | Goes to the person's "My shelf" (not copied); `anchor` must be `source` (default 3 s); `role` defaults to `sticker` |
+| Animation / lower third / styled text / video overlay | `add_overlay_clip { file, anchor, placement?, role? }` | `file` is a VP9 **alpha** WebM, ProRes 4444 MOV, or a folder of PNG frames you rendered; same frame size as the project (1 %) when it covers the frame. Set `role: "text"` for a title, lower third or card and `role: "captions"` for caption bands; keep `label` short (no "Caption:" prefix) |
+| Change or remove an overlay | `update_overlay_clip { id, enabled?, label?, anchor?, placement?, role? }`, `remove_overlay_clip { id }` | `role: "other"` clears the kind; removing leaves the file on disk |
 | Point the person at a spot | `focus_view { assetId, inPts, outPts, label }` | Not an edit; no revision |
 
-`add_overlay_clip` answers `clipId`, `status`, `width`, `height`, `fps`, `durationSec`, `hasAlpha`. A video without
-alpha is refused with `overlay.no_alpha`; pass `importAnyway: true` only when covering the picture is what the person
-asked for.
+`add_overlay_clip` answers `clipId`, `status`, `width`, `height`, `fps`, `durationSec`, `hasAlpha`, `placement`, `role`.
+A video without alpha goes in a box (`placement`, a default corner when you give none) and becomes `role: "pip"`;
+`importAnyway` is ignored. `role` is what the person sees as an icon on the timeline lane: `captions`, `text`,
+`sticker` or `pip`; without one, an alpha video reads as "other".
 
 ### Anchors
 

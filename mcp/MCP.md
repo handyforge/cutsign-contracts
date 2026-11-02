@@ -324,7 +324,7 @@ No parameters.
 
 ### list_overlay_clips
 
-**List overlay clips.** Overlay clips (alpha videos and stickers) with their anchor and whether they still match the timeline.
+**List overlay clips.** Overlay clips (alpha videos and stickers) with their anchor, their role and whether they still match the timeline.
 
 `readOnlyHint: true` · `openWorldHint: false`
 
@@ -521,7 +521,7 @@ No parameters.
 
 ### update_overlay_clip
 
-**Update overlay clip.** Switches, relabels, re-anchors or moves an overlay clip. Answers the command result: revision, transactionId, affected.
+**Update overlay clip.** Switches, relabels, re-anchors or moves an overlay clip; loops a video in a box or keeps its sound (loop, audio, gainDb), or changes its kind (role). Answers the command result: revision, transactionId, affected.
 
 `readOnlyHint: false` · `destructiveHint: false` · `openWorldHint: false`
 
@@ -533,6 +533,10 @@ No parameters.
 | `acceptedMapHash` | string | no |  |
 | `anchor` | { kind: "source", assetId, pts, durationPts } \| { kind: "output", startSec, endSec, revision, outputMapHash } | no |  |
 | `placement` | { x, y, w, h } | no | A box in fractions of the frame: 0 <= x, y; w, h > 0; x + w <= 1; y + h <= 1. |
+| `loop` | boolean | no | A video in a box only: repeat the file over the whole range (default: play once, then hold the last frame; on for a GIF or alpha WebM shorter than 1 s). |
+| `audio` | "mute" \| "mix" | no | A video in a box only: mix keeps its sound in the export (an export with it is fully re-encoded); mute (default) drops it. |
+| `gainDb` | integer ≥ -24, ≤ 12 | no | With audio mix only: the level of its sound in whole dB, -24 to 12 (default 0). mute drops it. |
+| `role` | "captions" \| "text" \| "sticker" \| "pip" \| "other" | no | Change the kind; other clears it. |
 | `expectedRevision` | integer ≥ 0 | yes | The revision you read (get_app_session, list_segments, ...). Another writer since then answers revision_conflict. |
 | `requestId` | string (≤ 100 chars) | no | Idempotency key: a retry with the same id returns the first answer. |
 
@@ -561,17 +565,21 @@ No parameters.
 
 ### add_overlay_clip
 
-**Add overlay clip.** Brings one file of yours into the project as an overlay: an alpha video (animation, video overlay, styled text) or a still sticker. The file must be under the workspace and at most 1 GiB. Anchor on a clip (source pts) or on output seconds (needs an exportable project). Answers clipId, status, width, height, fps, durationSec, hasAlpha.
+**Add overlay clip.** Brings one file of yours into the project as an overlay: an alpha video (animation, video overlay, styled text) or a still sticker. The file must be under the workspace and at most 1 GiB. Anchor on a clip (source pts) or on output seconds (needs an exportable project). A video without alpha (an MP4 from a phone or a screen recorder) or a GIF is placed in a box: picture-in-picture or an animated sticker. Set role so the person sees the kind at a glance; keep label short. Answers clipId, status, width, height, fps, durationSec, hasAlpha, placement, role.
 
 `readOnlyHint: false` · `destructiveHint: false` · `openWorldHint: false`
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `file` | string (≤ 4096 chars) | yes | A file under the workspace (get_workspace): .webm (VP9 alpha), .mov (ProRes 4444), a folder of PNG frames, or a still .png / .webp. |
+| `file` | string (≤ 4096 chars) | yes | A file under the workspace (get_workspace): .webm (VP9 alpha), .mov (ProRes 4444), a folder of PNG frames, a still .png / .webp, or an .mp4 / .gif (placed in a box). |
 | `anchor` | { kind: "source", assetId, pts, durationPts? } \| { kind: "output", startSec, endSec } | yes |  |
 | `label` | string (≤ 200 chars) | no |  |
-| `placement` | { x, y, w, h } | no | Still images only: where it sits. Default: bottom-right in the safe area. |
-| `importAnyway` | boolean | no | Add a video without an alpha channel anyway (it will cover the picture). |
+| `placement` | { x, y, w, h } | no | Where it sits (stills and videos), smaller than the frame for a video. A video without alpha gets a default box when omitted (bottom-right in the safe area); an alpha video without one covers the frame. |
+| `importAnyway` | boolean | no | Deprecated, ignored: a video without alpha is placed in a box instead of covering the frame. |
+| `loop` | boolean | no | A video in a box only: repeat the file over the whole range (default: play once, then hold the last frame; on for a GIF or alpha WebM shorter than 1 s). |
+| `audio` | "mute" \| "mix" | no | A video in a box only: mix keeps its sound in the export (an export with it is fully re-encoded); mute (default) drops it. |
+| `gainDb` | integer ≥ -24, ≤ 12 | no | With audio mix only: the level of its sound in whole dB, -24 to 12 (default 0). mute drops it. |
+| `role` | "captions" \| "text" \| "sticker" \| "pip" | no | What the clip is: captions (words following speech), text (a title, lower third or card), sticker, pip (your footage in a box). Omitted: inferred for a still, a GIF and a video without alpha in a box; else "other". |
 | `expectedRevision` | integer ≥ 0 | yes | The revision you read (get_app_session, list_segments, ...). Another writer since then answers revision_conflict. |
 | `requestId` | string (≤ 100 chars) | no | Idempotency key: a retry with the same id returns the first answer. |
 
