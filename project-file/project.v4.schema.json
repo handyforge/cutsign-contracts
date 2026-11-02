@@ -31,9 +31,11 @@
       "required": ["levelDb", "seconds"],
       "properties": {
         "levelDb": { "type": "number", "maximum": 0, "description": "Audio below this level in dBFS counts as silence." },
-        "seconds": { "type": "number", "minimum": 0, "description": "Shortest quiet stretch that becomes a silence segment." }
+        "seconds": { "type": "number", "minimum": 0, "description": "Shortest quiet stretch that becomes a silence segment." },
+        "padBeforeSeconds": { "type": "number", "minimum": 0, "maximum": 1, "description": "Optional: seconds of a silence kept before speech resumes, at the end of each proposed cut (CREATOR_SELECTS D10, F1d). Absent means the engine default, 0.10." },
+        "padAfterSeconds": { "type": "number", "minimum": 0, "maximum": 1, "description": "Optional: seconds of a silence kept after speech ends, at the start of each proposed cut (CREATOR_SELECTS D10, F1d). Absent means the engine default, 0.20." }
       },
-      "description": "Optional (version 4): the per-project silence threshold of preset `creator` (CREATOR_SELECTS feature D7). Absent means the engine default; v2/v3 documents never carry it. Rust and the engine validate it but do not read it yet."
+      "description": "Optional (version 4): the per-project silence threshold of preset `creator` (CREATOR_SELECTS feature D7), with the optional padding around speech (F1d). Absent means the engine default; v2/v3 documents never carry it. The desktop passes it to the engine as flags; Rust validates it but does not read it."
     },
     "createdAt": {
       "$ref": "#/$defs/timestamp",

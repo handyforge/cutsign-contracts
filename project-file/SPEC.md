@@ -17,12 +17,15 @@ readers do with them, and what we promise about stability. Where the two disagre
   in the output, who proposed each range, whether a person approved it, and how the output is presented (notes, boxes,
   overlays, joins).
 - It references media by absolute path (`assets[].path`, `presentation.overlayClips[].file`). Nothing is embedded.
-- Where the app writes (corrected 2026-11-02; the text of 2026-10-27 was wrong): today the app keeps the open project in
-  one autosave file inside its own profile (`<profile>/projects/autosave.cutsign.json`) and **never writes the file the
-  user opened**; edits made after opening a file exist only in that autosave, which the next project replaces. Treat a
-  file you hand to the app as a snapshot. A coming release changes this (feature `PROJECT_SAVE`, round S1, pending): an
-  opened version 4 `.cutsign.json` becomes the project and is rewritten after every edit, and projects without a file
-  are kept as drafts in the profile. This line will say so when that release ships.
+- Where the app writes (since the release after 0.7.0-beta.7, feature `PROJECT_SAVE` S1; the text of 2026-10-27 and the
+  correction of 2026-11-02 described older builds): **a version 4 `.cutsign.json` the user opens is the project**. The app
+  rewrites that file after every edit (people, the Assistant and MCP agents alike), atomically (a dot-prefixed
+  `.<name>.partial` in the same folder, then a rename), as `JSON.stringify(project, null, 2)`, and adds `id` on the first
+  write if the file had none. Opening a file does not write it. A project that was never saved as a file is a **draft**
+  in the app's profile (`<profile>/projects/drafts/<id>.cutsign.json`) until the user saves it somewhere with Save as.
+  An older file (version 1, 2 or 3, or another extension) is never written: it opens as a draft copied from it. If
+  another program changes the open file on disk, the app does not overwrite it: it keeps the edits in a draft and offers
+  to reload the file. Write to an open project's file only when the app is closed, or expect the app to step aside.
 
 ## 2. Stability promise
 
@@ -65,7 +68,7 @@ A reader tells 1 from 2+ by the presence of `assets`.
 | `manualOrder` | no | `true` once the user reordered by hand; stops automatic chronological sorting |
 | `segments[]` | yes | time ranges over assets, §7 |
 | `groups[]`, `groupingConfig` | no | media-pool grouping, §8; the desktop rebuilds unpinned groups on open |
-| `silenceThreshold` | no | `{ levelDb ≤ 0, seconds ≥ 0 }` for preset `creator`; absent = engine default |
+| `silenceThreshold` | no | `{ levelDb ≤ 0, seconds ≥ 0, padBeforeSeconds?, padAfterSeconds? }` for preset `creator`; the two pads (0..1 s, CREATOR_SELECTS F1d) are the silence kept before speech resumes and after it ends around each proposed cut; absent = engine default (whole object: −35 dB / 0.4 s; a pad: 0.10 / 0.20 s) |
 | `presentation` | no | notes, redactions, overlay clips, joins, audio, speed, look, §9 |
 | `preprocessingRuns[]` | no | history of analysis / auto-cut runs; informational |
 | `editor` | no | last view: `{ mode: "sequence" \| "isolated", isolatedAssetId }` |

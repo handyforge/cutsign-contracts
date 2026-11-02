@@ -38,5 +38,5 @@
     "encodeAcknowledged": false,
     "subtitles": { "soft": true, "sidecar": false }
   },
-  "silenceThreshold": { "levelDb": -35, "seconds": 0.4 }
+  "silenceThreshold": { "levelDb": -35, "seconds": 0.4, "padBeforeSeconds": 0.1, "padAfterSeconds": 0.2 }
 }
