@@ -185,7 +185,7 @@
         },
         "source": {
           "$ref": "#/$defs/proposalSource",
-          "description": "Optional (version 4, AGENT_CHAT_EDIT D7'). Set on a proposal the in-app Assistant made from a review comment (origin `ai`, review `pending` until decided) and kept after the decision; the card shows it as a chip. `label` then holds the reason code. The exporter and the engine ignore it."
+          "description": "Optional (version 4, AGENT_CHAT_EDIT D7'). Set on a proposal the in-app Assistant (or, since Q1, an MCP agent) made from a review comment (origin `ai`, review `pending` until decided) and kept after the decision; the card shows it as a chip. `label` then holds the reason code. The exporter and the engine ignore it."
         }
       }
     },
@@ -194,7 +194,8 @@
       "additionalProperties": false,
       "required": ["kind", "comment", "index", "model"],
       "properties": {
-        "kind": { "const": "assistant" },
+        "kind": { "enum": ["assistant", "agent"], "description": "`assistant`: the in-app Assistant. `agent` (Q1, review K15 F6): an external agent writing over MCP, named by `client`." },
+        "client": { "type": "string", "minLength": 1, "maxLength": 80, "description": "Optional, required with `kind: agent`: the MCP client's name as it introduced itself (`claude-code`). The card reads \"Agent · <client>\"." },
         "comment": { "type": "string", "maxLength": 500, "description": "The review comment the proposal came from, cut to 500 characters." },
         "index": { "type": "integer", "minimum": 0, "description": "0-based position of the comment in what the user pasted." },
         "model": { "type": "string", "minLength": 1, "description": "Model that classified the comment." },
@@ -204,7 +205,9 @@
           "description": "Numbers the card's reason line is built from (shake variance and threshold in px, scene time in s)."
         }
       },
-      "description": "Provenance of an Assistant proposal (AGENT_CHAT_EDIT D7'): who asked, in which comment, through which model."
+      "if": { "required": ["kind"], "properties": { "kind": { "const": "agent" } } },
+      "then": { "properties": { "client": true }, "required": ["client"] },
+      "description": "Provenance of a proposal (AGENT_CHAT_EDIT D7'): who asked, in which comment, through which model — the in-app Assistant, or since Q1 an external MCP agent and its client."
     },
     "group": {
       "type": "object",
@@ -319,7 +322,7 @@
           "pattern": "^[A-Za-z0-9_-]{1,80}$",
           "description": "Optional (AGENT_CHAT_EDIT A2b). Every note the desktop writes has one (`note-<seed>`, repeatable on redo), so a later edit can name it."
         },
-        "source": { "$ref": "#/$defs/proposalSource", "description": "Optional: set when the Assistant wrote the note." },
+        "source": { "$ref": "#/$defs/proposalSource", "description": "Optional: set when the Assistant or an MCP agent wrote the note." },
         "assetRef": {
           "type": "string",
           "pattern": "^[a-z0-9/_-]{1,80}$",
@@ -355,7 +358,7 @@
           "pattern": "^[A-Za-z0-9_-]{1,80}$",
           "description": "Optional (AGENT_CHAT_EDIT A3a). Every box the desktop writes has one (`redaction-<seed>`, repeatable on redo), so a later edit can name it."
         },
-        "source": { "$ref": "#/$defs/proposalSource", "description": "Optional: set when the Assistant asked for the box." },
+        "source": { "$ref": "#/$defs/proposalSource", "description": "Optional: set when the Assistant or an MCP agent asked for the box." },
         "needsPlacement": {
           "type": "boolean",
           "description": "Optional (AGENT_CHAT_EDIT D10): true while the box sits at its default place and nobody has moved it onto what it must hide. Every export refuses while one is true (desktop and backend)."

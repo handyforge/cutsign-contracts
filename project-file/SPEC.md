@@ -156,9 +156,12 @@ Required: `id`, `assetId`, `sourceInPts`, `sourceOutPts` (exclusive end), `inclu
   proposes a cut should write `pending` and leave approval to the person; a tool that acts on the person's explicit
   decision may write `approved`.
 - **`locked`.** Optional, default false; readers OR it with `origin == "human-protected"`.
-- **`source`** (`$defs/proposalSource`): provenance of an Assistant proposal: `{ kind: "assistant", comment, index, model,
-  measurements? }`. An outside agent that proposes segments SHOULD fill it (its `model` name, the instruction it acted on in
-  `comment` ≤ 500 chars) so the card shows who asked. Readers never derive behaviour from it.
+- **`source`** (`$defs/proposalSource`): provenance of a proposal: `{ kind, comment, index, model, measurements?, client? }`.
+  `kind` is `assistant` (the in-app Assistant) or `agent` (an external agent; then `client`, 1–80 chars, is required and
+  names it — the card reads "Agent · <client>"; added 2026-11-02 without a version bump). An outside agent that proposes
+  segments SHOULD fill it with `kind: "agent"`, its client name, its `model` name and the instruction it acted on in
+  `comment` ≤ 500 chars, so the card shows who asked; over MCP the app stamps `agent` and the client itself. Readers
+  never derive behaviour from it.
 - **`label`.** Free text for humans; the desktop builds card text from `origin` + `audio`, never from `label`.
 
 ## 8. Groups

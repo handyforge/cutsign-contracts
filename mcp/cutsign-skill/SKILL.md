@@ -72,7 +72,7 @@ Every write below also takes `expectedRevision` (required) and `requestId` (opti
 | Trim an edge | `trim_segment { segmentId, edge: "in" \| "out", pts }` | Clamped to the neighbours |
 | Reorder clips | `move_asset { assetId, targetIndex }` | |
 | Work on one clip alone | `set_editor_scope { isolatedAssetId }` | `null` for the whole sequence |
-| Suggest a cut for review | `propose_range { assetId, inPts, outPts, source: { kind: "assistant", comment, index, model }, reasonCode }` | Shows as a pending card with your model name |
+| Suggest a cut for review | `propose_range { assetId, inPts, outPts, source: { comment, index, model }, reasonCode }` | Shows as a pending card named "Agent · <your MCP client>"; the comment is quoted on it |
 | A note at a time | `add_note { assetId, pts, durationPts, text }` | `durationPts > 0` makes it a subtitle line; notes also become EDL comments |
 | Many lines at once (captions, chapter notes) | `add_notes { lines: [{ assetId, pts, durationPts, text }] }` | ≤ 500 lines, text ≤ 500 characters, one Undo step; answers `noteIds` in order |
 | Fix a note's words, time or length | `update_note { id, text?, pts?, durationPts? }` | At least one field; the note stays inside its clip (`command.invalid_result` otherwise); ids from `list_notes` |

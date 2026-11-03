@@ -28,7 +28,7 @@
       { "id": "note-s2", "assetId": "asset-creator-1", "pts": 0, "durationPts": 6000, "text": "Sponsor", "source": { "kind": "assistant", "comment": "0:00 sponsor text", "index": 1, "model": "qwen3:8b" }, "assetRef": "fluent/1f602" }
     ],
     "redactions": [
-      { "id": "redaction-s3", "assetId": "asset-creator-1", "inPts": 1000, "outPts": 3000, "rect": { "x": 0.3, "y": 0.375, "w": 0.4, "h": 0.25 }, "style": "pixelate", "needsPlacement": false, "source": { "kind": "assistant", "comment": "0:01-0:03 blur the plate", "index": 2, "model": "qwen3:8b" } }
+      { "id": "redaction-s3", "assetId": "asset-creator-1", "inPts": 1000, "outPts": 3000, "rect": { "x": 0.3, "y": 0.375, "w": 0.4, "h": 0.25 }, "style": "pixelate", "needsPlacement": false, "source": { "kind": "agent", "client": "claude-code", "comment": "0:01-0:03 blur the plate", "index": 2, "model": "claude-code" } }
     ],
     "overlayClips": [
       { "id": "overlay-s4-1", "file": "{{root}}/creator-1-overlay/renders/sponsor.webm", "anchor": { "kind": "source", "assetId": "asset-creator-1", "pts": 500, "durationPts": 4000 }, "enabled": true, "label": "Sponsor card", "fromNoteId": "note-s2", "briefRevision": 7, "fileHash": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", "fileStat": { "size": 48213, "mtimeMs": 1760864400123.5 }, "manifestId": "sponsor", "width": 1920, "height": 1080, "fps": 30 },

@@ -148,7 +148,9 @@ The running app writes `<profile>\mcp\session.json` once its pipe listens, and r
   the pipe must carry it; anything else is answered `unauthorized` and closed, without a word about the session.
 - **Footage paths stay in the app.** Tools name clips by id and file name, never by path.
 - **The agent's files come from one place.** `get_workspace` returns the workspace folder: `.cutsign-agent\` next to
-  the project file, or `<profile>\agent-workspace\<projectId>\` for a project without a file. Tools that take a path
+  the project file, or `<profile>\agent-workspace\<projectId>\` for a draft (a project not yet saved as a file:
+  `get_app_session.draft` is true). After the person saves a draft as a file, the next `get_workspace` answers the new
+  folder; files already brought in stay where they are. Tools that take a path
   (`add_overlay_clip`, `import_overlay_manifest`, `import_subtitles`) accept only files under it, or under a brief
   folder `write_brief` made in this run, compared after resolving links (a junction pointing outside is refused).
   Limits: 1 GiB per overlay file or PNG folder, 4 MiB per subtitle file. The app references these files, it does not
@@ -252,7 +254,7 @@ test fails when this section is out of date.
 
 ### get_app_session
 
-**App session.** The running CutSign app: session id, open project id, its revision, project type (preset) and app version. Call this first.
+**App session.** The running CutSign app: session id, open project id, its revision, project type (preset), the project file path and whether it is a draft (not yet saved as a file), and app version. Call this first.
 
 `readOnlyHint: true` · `openWorldHint: false`
 
@@ -436,7 +438,7 @@ No parameters.
 | `assetId` | string (≤ 200 chars) | yes |  |
 | `inPts` | integer ≥ 0 | yes |  |
 | `outPts` | integer ≥ 0 | yes |  |
-| `source` | { kind: "assistant", comment, index, model, measurements? } | yes |  |
+| `source` | { kind?, comment, index, model, measurements? } | yes |  |
 | `reasonCode` | string `^[a-z][a-z0-9_]{0,63}$` | yes |  |
 | `idSeed` | string `^[A-Za-z0-9_-]{1,64}$` | no | Makes the ids this call creates predictable (letters, digits, - and _). Default: derived from requestId. |
 | `expectedRevision` | integer ≥ 0 | yes | The revision you read (get_app_session, list_segments, ...). Another writer since then answers revision_conflict. |
@@ -454,7 +456,7 @@ No parameters.
 | `pts` | integer ≥ 0 | yes |  |
 | `durationPts` | integer ≥ 0 | yes |  |
 | `text` | string (≤ 500 chars) | yes |  |
-| `source` | { kind: "assistant", comment, index, model, measurements? } | no | Provenance shown on the proposal card: the comment it answers, its index and the model name. |
+| `source` | { kind?, comment, index, model, measurements? } | no | Provenance shown on the proposal card: the comment it answers, its index and the model name; the card names your MCP client. |
 | `id` | string `^[A-Za-z0-9_-]{1,80}$` | no | An existing note id: replaces its text. |
 | `idSeed` | string `^[A-Za-z0-9_-]{1,64}$` | no | Makes the ids this call creates predictable (letters, digits, - and _). Default: derived from requestId. |
 | `expectedRevision` | integer ≥ 0 | yes | The revision you read (get_app_session, list_segments, ...). Another writer since then answers revision_conflict. |
@@ -513,7 +515,7 @@ No parameters.
 | `outPts` | integer ≥ 0 | yes |  |
 | `rect` | { x, y, w, h } | yes | A box in fractions of the frame: 0 <= x, y; w, h > 0; x + w <= 1; y + h <= 1. |
 | `style` | "pixelate" \| "blur" \| "solid" | yes |  |
-| `source` | { kind: "assistant", comment, index, model, measurements? } | no | Provenance shown on the proposal card: the comment it answers, its index and the model name. |
+| `source` | { kind?, comment, index, model, measurements? } | no | Provenance shown on the proposal card: the comment it answers, its index and the model name; the card names your MCP client. |
 | `needsPlacement` | boolean | no |  |
 | `idSeed` | string `^[A-Za-z0-9_-]{1,64}$` | no | Makes the ids this call creates predictable (letters, digits, - and _). Default: derived from requestId. |
 | `expectedRevision` | integer ≥ 0 | yes | The revision you read (get_app_session, list_segments, ...). Another writer since then answers revision_conflict. |
